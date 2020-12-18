@@ -2,31 +2,54 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
+	"os"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
 
-var movies = []struct {
-	ID   int    `json:"id"`
+type Movie struct {
+	ID   string `json:"id"`
 	Name string `json:"name"`
-}{
-	{ID: 1, Name: "Avengers"},
-	{ID: 2, Name: "Ant-Man"},
-	{ID: 3, Name: "Thor"},
-	{ID: 4, Name: "Hulk"},
-	{ID: 5, Name: "Iron Man"},
 }
 
 func index() (events.APIGatewayProxyResponse, error) {
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	}))
+	svc := dynamodb.New(sess)
+	req, resp := svc.ScanRequest(&dynamodb.ScanInput{
+		TableName: aws.String(os.Getenv("TABLE_NAME")),
+	})
+	err := req.Send()
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       "Error while scanning DynamoDB",
+		}, nil
+	}
+	movies := make([]Movie, 0)
+	for _, item := range resp.Items {
+		movies = append(movies, Movie{
+			ID:   *item["ID"].S,
+			Name: *item["Name"].S,
+		})
+	}
 	response, err := json.Marshal(movies)
 	if err != nil {
-		return events.APIGatewayProxyResponse{}, err
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       "Error while marshal resp items",
+		}, nil
 	}
 	return events.APIGatewayProxyResponse{
-		StatusCode: 200,
+		StatusCode: http.StatusOK,
 		Headers: map[string]string{
-			"Content-Type": "applicaton/json",
+			"Content-Type": "application/json",
 		},
 		Body: string(response),
 	}, nil
