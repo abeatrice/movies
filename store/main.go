@@ -2,47 +2,58 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
+	"os"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
 
 type Movie struct {
-	ID   int    `json:"id"`
+	ID   string `json:"id"`
 	Name string `json:"name"`
 }
 
-var movies = []Movie{
-	{ID: 1, Name: "Avengers"},
-	{ID: 2, Name: "Ant-Man"},
-	{ID: 3, Name: "Thor"},
-	{ID: 4, Name: "Hulk"},
-	{ID: 5, Name: "Iron Man"},
-}
-
-func store(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func store(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var movie Movie
-	err := json.Unmarshal([]byte(req.Body), &movie)
+	err := json.Unmarshal([]byte(request.Body), &movie)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
-			StatusCode: 400,
-			Body:       "invalid payload",
+			StatusCode: http.StatusInternalServerError,
+			Body:       "failed to json unmarshal request body",
 		}, nil
 	}
-	movies = append(movies, movie)
-	response, err := json.Marshal(movies)
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	}))
+	svc := dynamodb.New(sess)
+	req, _ := svc.PutItemRequest(&dynamodb.PutItemInput{
+		TableName: aws.String(os.Getenv("TABLE_NAME")),
+		Item: map[string]*dynamodb.AttributeValue{
+			"ID": &dynamodb.AttributeValue{
+				S: aws.String(movie.ID),
+			},
+			"Name": &dynamodb.AttributeValue{
+				S: aws.String(movie.Name),
+			},
+		},
+	})
+	err = req.Send()
 	if err != nil {
 		return events.APIGatewayProxyResponse{
-			StatusCode: 500,
-			Body:       err.Error(),
+			StatusCode: http.StatusInternalServerError,
+			Body:       "dynamodb PutItemRequest failed to send",
 		}, nil
 	}
+
 	return events.APIGatewayProxyResponse{
 		StatusCode: 200,
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
-		Body: string(response),
 	}, nil
 }
 
