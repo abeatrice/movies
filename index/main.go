@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -17,15 +18,23 @@ type Movie struct {
 	Name string `json:"name"`
 }
 
-func index() (events.APIGatewayProxyResponse, error) {
+func index(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	size, err := strconv.Atoi(request.Headers["Count"])
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusBadRequest,
+			Body:       err.Error(),
+		}, nil
+	}
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 	svc := dynamodb.New(sess)
 	req, resp := svc.ScanRequest(&dynamodb.ScanInput{
 		TableName: aws.String(os.Getenv("TABLE_NAME")),
+		Limit:     aws.Int64(int64(size)),
 	})
-	err := req.Send()
+	err = req.Send()
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
