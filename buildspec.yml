@@ -13,5 +13,6 @@ phases:
       - cd "/go/src/${PACKAGE}"
       - cd index
       - go get .
+      - go list -f {{.Target}} golang.org/x/lint/golint
       - golint
       - go test .
