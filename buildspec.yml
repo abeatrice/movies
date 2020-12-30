@@ -8,7 +8,6 @@ phases:
     commands:
       - mkdir -p "/go/src/${PACKAGE}"
       - ln -s "${CODEBUILD_SRC_DIR}" "/go/src/${PACKAGE}"
-      - go get -u github.com/golang/lint/golint
   pre_build:
     commands:
       - cd /go/src/${PACKAGE}/index"
