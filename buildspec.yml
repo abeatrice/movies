@@ -10,9 +10,5 @@ phases:
       - ln -s "${CODEBUILD_SRC_DIR}" "/go/src/${PACKAGE}"
   pre_build:
     commands:
-      - cd "/go/src/${PACKAGE}"
-      - cd index
-      - go get .
-      - go list -f {{.Target}} golang.org/x/lint/golint
-      - /go/bin/golint
+      - cd "/go/src/${PACKAGE}/index"
       - go test .
