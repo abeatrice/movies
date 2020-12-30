@@ -12,5 +12,4 @@ phases:
     commands:
       - cd "/go/src/${PACKAGE}"
       - cd index
-      - go get -t ..
       - go test .
