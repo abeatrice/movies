@@ -10,7 +10,7 @@ phases:
       - ln -s "${CODEBUILD_SRC_DIR}" "/go/src/${PACKAGE}"
   pre_build:
     commands:
-      - cd /go/src/${PACKAGE}/index"
+      - cd "/go/src/${PACKAGE}/index"
       - go get -t ./..
       - golint -set_exit_status
       - go vet .
