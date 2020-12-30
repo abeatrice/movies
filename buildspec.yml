@@ -14,5 +14,5 @@ phases:
       - cd index
       - go get .
       - go list -f {{.Target}} golang.org/x/lint/golint
-      - golint
+      - /go/bin/golint
       - go test .
