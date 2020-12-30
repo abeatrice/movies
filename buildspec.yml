@@ -6,4 +6,10 @@ env:
 phases:
   install:
     commands:
+      - pwd
+      - ls -lah
       - ls -lah "${CODEBUILD_SRC_DIR}"
+      - mkdir -p "/go/src/$(dirname ${PACKAGE})"
+      - ln -s "${CODEBUILD_SRC_DIR}" "/go/src/${PACKAGE}"
+      - ls - lah "/go/src/${PACKAGE}"
+      
