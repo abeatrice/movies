@@ -6,13 +6,11 @@ env:
 phases:
   install:
     commands:
-      - echo Entered the install phase...
-      - mkdir -p "/go/src/${dirname ${PACKAGE}}"
+      - mkdir -p "/go/src/${PACKAGE}"
       - ln -s "${CODEBUILD_SRC_DIR}" "/go/src/${PACKAGE}"
       - go get -u github.com/golang/lint/golint
   pre_build:
     commands:
-      - echo Entered pre_build phase...
       - cd /go/src/${PACKAGE}/index"
       - go get -t ./..
       - golint -set_exit_status
@@ -20,11 +18,9 @@ phases:
       - go test .
   build:
     commands:
-      - echo Entered build phase...
       - GOOS=linux go build -o main
       - zip $CODEBUILD_RESOLVED_SOURCE_VERSION.zip main
       - aws s3 cp $CODEBUILD_RESOLVED_SOURCE_VERSION.zip s3://$S3_BUCKET/
   post_build:
     commands:
-      - echo Entered post_build
       - aws lambda update-function-code --function-name MoviesIndex --s3-bucket $S3_BUCKET --s3-key $CODEBUILD_RESOLVED_SOURCE_VERSION.zip
