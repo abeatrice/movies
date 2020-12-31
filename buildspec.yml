@@ -6,13 +6,18 @@ env:
 phases:
   install:
     commands:
-      - echo "CODEBUILD_WEBHOOK_BASE_REF ${CODEBUILD_WEBHOOK_BASE_REF}"
-      - echo "CODEBUILD_SOURCE_VERSION ${CODEBUILD_SOURCE_VERSION}"
-      - echo "CODEBUILD_WEBHOOK_MERGE_COMMIT ${CODEBUILD_WEBHOOK_MERGE_COMMIT}"
-      - echo "CODEBUILD_WEBHOOK_TRIGGER ${CODEBUILD_WEBHOOK_TRIGGER}"
-      - |
-        if [[ "${CODEBUILD_WEBHOOK_BASE_REF}" == "master" ]]; then
-          echo "codebuild webhook base ref is master"
-        else
-          echo "codebuild webhook base ref is not master"
-        fi
+      - mkdir -p "/go/src/$(dirname ${PACKAGE})"
+      - ln -s "${CODEBUILD_SRC_DIR}" "/go/src/${PACKAGE}"
+  pre_build:
+    commands:
+      - cd "/go/src/${PACKAGE}/index"
+      - go test .
+  build:
+    commands:
+      - GOOS=linux go build -o main
+      - zip $CODEBUILD_RESOLVED_SOURCE_VERSION.zip main
+      - aws s3 cp $CODEBUILD_RESOLVED_SOURCE_VERSION.zip s3://$S3_BUCKET/
+  post_build:
+    commands:
+      - aws lambda update-function-code --function-name MoviesIndex --s3-bucket $S3_BUCKET --s3-key $CODEBUILD_RESOLVED_SOURCE_VERSION.zip
+      - aws lambda publish-version --function-name MoviesIndex
